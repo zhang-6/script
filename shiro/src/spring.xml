@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+    <!--单词→securityManager安全管理器   DefaultWebSecurityManager默认Web安全管理器   cacheManager缓存管理器
+       lifecycleBeanPostProcessor生命周期处理器   DefaultAdvisorAutoProxyCreator默认顾问自动代理创建程序
+       AuthorizationAttributeSourceAdvisor授权属性资源管理器   unauthorizedUrl未经授权   filterChainDefinitionMap过滤链定义图
+          authc授权-->
+    <!--配置securityManager   →相当于一个管家:管理cacheManager、realm-->
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <!--引入配置的缓存文件-->
+        <property name="cacheManager" ref="cacheManager"/>
+        <!--引用配置的多realm-->
+        <property name="authenticator" ref="authenticator"/>
+    </bean>
+    <!--配置缓存文件-->
+    <bean id="cacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
+        <property name="cacheManagerConfigFile" value="classpath:ehcache.xml"/>
+    </bean>
+    <!--配置多realm-->
+    <bean id="authenticator" class="org.apache.shiro.authc.pam.ModularRealmAuthenticator">
+        <property name="realms">
+            <!--引用-->
+            <list>
+                <ref bean="jdbcRealm"/>
+                <ref bean="secondRealm"/>
+            </list>
+        </property>
+        <property name="authenticationStrategy">
+            <!--只要一个验证成功就通过-->
+            <!--<bean class="org.apache.shiro.authc.pam.FirstSuccessfulStrategy"></bean>-->
+            <bean class="org.apache.shiro.authc.pam.AllSuccessfulStrategy"></bean>
+        </property>
+    </bean>
+    <!--配置realm验证框架-->
+    <bean id="jdbcRealm" class="shiro.ShiroRealm">
+        <!-- 因为credentialsMatcher就是shiro进行密码比对的类 -->
+        <property name="credentialsMatcher">
+            <bean class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+                <!--使用MD5加密-->
+                <property name="hashAlgorithmName" value="MD5"></property>
+                <!--加密1024次-->
+                <property name="hashIterations" value="1024"></property>
+            </bean>
+        </property>
+    </bean>
+    <bean id="secondRealm" class="shiro.SecondRealm">
+        <!-- 因为credentialsMatcher就是shiro进行密码比对的类 -->
+        <property name="credentialsMatcher">
+            <bean class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+                <!--使用MD5加密-->
+                <property name="hashAlgorithmName" value="SHA1"></property>
+                <!--加密1024次-->
+                <property name="hashIterations" value="1024"></property>
+            </bean>
+        </property>
+    </bean>
+    <!--配置lifecycleBeanPostProcessor 可以自动的来调用配置在spring ioc容器中的shiro bean的生命周期方法-->
+    <bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor"/>
+    <!--启动容器中使用的shiro的注解，但必须配置lifecycleBeanPostProcessor之后才能使用-->
+    <bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"
+          depends-on="lifecycleBeanPostProcessor"/>
+    <!--引用securityManager-->
+    <bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+        <property name="securityManager" ref="securityManager"/>
+    </bean>
+    <!--shiro的过滤器-->
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <property name="securityManager" ref="securityManager"/>
+        <!--登录请求-->
+        <property name="loginUrl" value="/login.jsp"/>
+        <!--成功-->
+        <property name="successUrl" value="/list.jsp"/>
+        <!--没有权限的页面-->
+        <property name="unauthorizedUrl" value="/unauthorized.jsp"/>
+        <property name="filterChainDefinitionMap">
+            <value>
+                <!--
+            		filterChainDefinitions的作用是：
+            		配置哪些页面被保护，以及哪些页面需要权限
+            		anon 可以被匿名访问
+            		authc 必须认证(登录)后才能访问的页面
+            		logout 登出
+            		roles 角色过滤器
+            	-->
+                /login.jsp = anon
+                /shiro/login = anon
+                /** = authc
+            </value>
+        </property>
+    </bean>
+</beans>

@@ -1,0 +1,22 @@
+shiro为java安全框架
+→→@PathVariabl和RequestParam用发与区别
+因为可能数据来源不相同，可能来之不同数据库，所以需要用多realm进行验证→→2
+三大核心组件：Subiect>SecurityManager>Realm
+SecurityManager→用于数据交互，多个地方被引用
+1、验证
+	①获取当前subject，调用SecurityUtils.getSubject();
+	②测试当前用户是否已经被验证，即是否登录成功，调用subject的isAuthenticated()方法
+	③若没有被验证，则把用户名和密码封装为UsernamePasswordToken对象
+		1）创建一个form表单页面
+		2）把请求提交到springmvc的handler(映射到类里面的某一个方法)
+		3）获取用户名和密码
+	④执行登录，调用subject的login(AuthenticationToken)方法
+	⑤自定义Realm方法，从数据库中获取对应的记录，返回给shiro
+		1）实际上需要继承AuthenticatingRealm类
+		2）实现doGetAuthenticationInfo方法
+	⑥由shiro完成密码的比对
+2、多relams验证
+	①FirstSuccessfulStrategy:只要有一个验证成功即可，只返回第一个relam身份验证成功信息，其他的忽略
+	②AtLeastOneSuccessfulStrategy:只要有一个验证成功即可和FirstSuccessfulStrategy不同在于，它会答应所有relam身份验证信息
+	③AllSuccessfulStrategy:所有relam验证成功才算成功，且返回所有的relam的身份信息
+	ModularRealmAuthenticator默认的是第二个
